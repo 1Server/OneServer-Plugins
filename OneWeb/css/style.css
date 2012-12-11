@@ -1,0 +1,153 @@
+@CHARSET "ISO-8859-1";
+
+/* Page Wide */
+body {
+	background-repeat: no-repeat;
+	background-position: center;
+	background-attachment: fixed;
+	background-color: #28394b;
+	text-align: center;
+	color: #D0D0D0;
+}
+
+/* Login */
+input[type="text"],
+input[type="password"] {
+	border: 2px solid #6a4a85;
+	background: #ffffff;
+	color: #6a4a85;
+}
+
+input[type="submit"],
+input[type="reset"] {
+	border: none;
+	background: transparent;
+	color: #6a4a85;
+}
+
+input[type="submit"]:hover,
+input[type="reset"]:hover {
+	border: thin #999999 outset;
+	filter: alpha(opacity = 50);
+	-moz-opacity: .5;
+	opacity: .5;
+	background: #FFFFFF;
+	color: #000000;
+}
+
+input[type="submit"]:focus,
+input[type="reset"]:focus {
+	border: thin #000000 solid;
+	background: #FFFFFF;
+	color: #000000;
+}
+
+input[type="submit"]:focus:hover,
+input[type="reset"]:focus:hover
+{
+	border: thin #000000 solid;
+	filter: alpha(opacity = 100);
+	-moz-opacity: 1;
+	opacity: 1;
+	background: #FFFFFF;
+	color: #000000;
+}
+#loginLogoPanel {
+	position: relative;
+	max-height: 50%;
+}
+
+#loginLogoImg {
+	cursor: pointer;
+	height: 30%;
+	width: 30%;
+}
+
+#loginbox {
+	text-align: left;
+}
+
+#box_error {
+	position: relative;
+	width: 50%;
+	height: 30%;
+	left: 39%;
+	top: 75%;
+}
+
+/* Page */
+#structure
+{
+	margin:2.5%;
+	text-align: left;
+	width:95%;
+	height:95%;
+}
+
+
+#structure tr td table,
+#structure tr td table tr,
+#structure tr td table tr td
+{
+	border-collapse: collapse;
+	border: 1px solid #000000;
+}
+
+#structure tr td table
+{
+	height: 100%;
+	width:100%;
+}
+
+#headerRow
+{
+	height:100px;
+}
+#navBarRow
+{
+	height:30px;
+}
+#mainRow
+{
+	height:600px;
+}
+#footerRow
+{
+	height:50px;
+}
+#logo
+{
+	width:25%;
+}
+#title
+{
+	width:50%;
+}
+#loginInfo
+{
+	width:25%;
+}
+#navBar
+{
+	
+}
+#lgutter
+{
+	width:15%;
+}
+#content
+{
+	width:70%;
+}
+#rgutter
+{
+	width:15%;
+}
+#footer
+{
+	
+}
+
+
+
+
