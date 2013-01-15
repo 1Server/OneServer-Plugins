@@ -1,5 +1,6 @@
 from IStoragePluginObserver import IStoragePluginObserver
 import sqlite3
+from vfs import Entry
 ##
 # Provides a data source to browse local files for OneServer
 # Will add a directory structure like so
@@ -10,8 +11,10 @@ import sqlite3
 # Metadata shoudl be gotten with https://bitbucket.org/haypo/hachoir/wiki/hachoir-metadata
 class LocalFilePlugin(IStoragePluginObserver):
 
+	self.PLUGINDATABASE = 'lfpDatabase.db'
+
 	def __init__(self):
-		pass
+		self.dbHelper = LocalFileDatabaseHelper()
 		
 	def enable(self):
 		raise NotImplementedError( "Should have implemented this" )
@@ -79,27 +82,190 @@ class LocalFileDatabaseHelper():
 	##
 	# database is the path to the sqlite file
 	def __init__(self, database):
-		pass
+		self.database = sqlite3.connect(database)
+		self.cur = database.cursor()
+		
 	
 	##
 	# Creates the database if needed
 	def onCreate(self):
-		pass
-		
+		try:
+			self.cur.execute('''create table if not exists plugin_Video(Filename varchar,Extension varchar,Format varchar,Genres varchar,DateCreated varchar,Directors varchar)''')
+			self.cur.execute('''create table if not exists plugin_Audio(Filename varchar,Extension varchar,Format varchar,Genres varchar,DateCreated varchar,Artists varchar,Album varchar)''')
+			self.cur.execute('''create table if not exists plugin_Images(Filename varchar,Extension varchar,Format varchar,DateCreated varchar,Artists varchar)''')
+		except sqlite3.Error, msg:
+			print msg
+	
+	
+	
 	##
 	# This function addes the given Entry to the database
 	# metadata will be a dict with keys such as genre and artist
-	def addEntry(self, title, metadata):
-		pass
+	#
+	# @param title String of title
+	# @param metadata dict with keys like genre and artist
+	# @param type You need to pass in what type of media object it is.  0 for Video, 1 for Audio, and 2 for images
+	def addEntry(self, title, metadata,type):
+		try:
+			if(type==0):
+				filename = metadata[filename]
+				extension = metadata[extension]
+				format = metadata[format]
+				genres = metadata[genres]
+				datecreated = metadata[datecreated]
+				directors = metadata[directors]
+				
+				self.cur.execute("insert into plugin_Video values ("+filename+","+extension+","+format+","+genres+","+datecreated+","+directors+")")
+				self.database.commit()
+			elif(type==1):
+				filename = metadata[filename]
+				extension = metadata[extension]
+				format = metadata[format]
+				genres = metadata[genres]
+				datecreated = metadata[datecreated]
+				artists = metadata[artists]
+				album = metadata[album]
+				
+				self.cur.execute("insert into plugin_Audio values ("+filename+","+extension+","+format+","+genres+","+datecreated+","+artists+","+album+")")
+				self.database.commit()
+			elif(type==2):
+				filename = metadata[filename]
+				extension = metadata[extension]
+				format = metadata[format]
+				datecreated = metadata[datecreated]
+				artists = metadata[artists]
+				
+				self.cur.execute("insert into plugin_Images values ("+filename+","+extension+","+format+","+datecreated+","+artists+")")
+				self.database.commit()
+		except sqlite3.Error, msg:
+			print msg
 		
 	##
 	# This function get a dictionary containing all metadata on the given title
 	# In a dict that with keys that define the type of data such as genre
-	def getEntry(self, title):
-		pass
-		
+	#
+	# @title title String of title
+	# @param type You need to pass in what type of media object it is.  0 for Video, 1 for Audio, and 2 for images
+	def getEntry(self, title, type=0):
+		answer = None
+		try:
+			if(type==0):
+				self.cur.execute("select * from plugin_Video where Filename ='"+title+"';")
+				answer = self.cur.fetchone()
+				answer = dict(answer)
+			elif(type==1):
+				answer = self.cur.execute("select * from plugin_Audio where Filename ='"+title+"';")
+				answer = self.cur.fetchone()
+				answer = dict(answer)
+			elif(type==2):
+				answer = self.cur.execute("select * from plugin_Images where Filename ='"+title+"';")
+				answer = self.cur.fetchone()
+				answer = dict(answer)
+		except sqlite3.Error, msg:
+			print msg
+		return answer
 	##
 	# Returns a list of titles that match the given metadata dict
-	def findEntry(self, metadata):
-		pass
+	#
+	# @param metadata dict with keys like Genre or Artists
+	# @param type You need to pass in what type of media object it is.  0 for Video, 1 for Audio, and 2 for images
+	def findEntry(self, metadata, type=0):
+		answer = None
+		try:
+			if(type==0):
+				if(metadata[filename]==None):
+					filename = "*"
+				else:
+					filename = metadata[filename]
+				if(metadata[extension]==None):
+					extension = "*"
+				else:
+					extension = metadata[extension]
+				if(metadata[format]==None):
+					format = "*"
+				else:
+					format = metadata[format]
+				if(metadata[genres]==None):
+					genres = "*"
+				else:
+					genres = metadata[genres]
+				if(metadata[datecreated]==None):
+					datecreated = "*"
+				else:
+					datecreated = metadata[datecreated]
+				if(metadata[directors]==None):
+					directors = "*"
+				else:
+					directors = metadata[directors]
+				
+				
+				self.cur.execute("select * from plugin_Video where Extension ='"+extension+"' and Format ='"+format+"' and Genres ='"+genres+"' and DateCreated ='"+datecreated+"' and Directors ='"+directors+"';")
+				answer = self.cur.fetchall()
+				answer = dict(answer)
+			elif(type==1):
+				if(metadata[filename]==None):
+					filename = "*"
+				else:
+					filename = metadata[filename]
+				if(metadata[extension]==None):
+					extension = "*"
+				else:
+					extension = metadata[extension]
+				if(metadata[format]==None):
+					format = "*"
+				else:
+					format = metadata[format]
+				if(metadata[genres]==None):
+					genres = "*"
+				else:
+					genres = metadata[genres]
+				if(metadata[datecreated]==None):
+					datecreated = "*"
+				else:
+					datecreated = metadata[datecreated]
+				if(metadata[artists]==None):
+					artists = "*"
+				else:
+					artists = metadata[artists]
+				if(metadata[album]==None):
+					album = "*"
+				else:
+					album = metadata[album]
+				
+				answer = self.cur.execute("select * from plugin_Audio where Extension ='"+extension+"' and Format ='"+format+"' and Genres ='"+genres+"' and DateCreated ='"+datecreated+"' and Artists ='"+artists+" and Album ='"+album+"';")
+				answer = self.cur.fetchall()
+				answer = dict(answer)
+			elif(type==2):
+				if(metadata[filename]==None):
+					filename = "*"
+				else:
+					filename = metadata[filename]
+				if(metadata[extension]==None):
+					extension = "*"
+				else:
+					extension = metadata[extension]
+				if(metadata[format]==None):
+					format = "*"
+				else:
+					format = metadata[format]
+				if(metadata[datecreated]==None):
+					datecreated = "*"
+				else:
+					datecreated = metadata[datecreated]
+				if(metadata[artists]==None):
+					artists = "*"
+				else:
+					artists = metadata[artists]
+				
+				answer = self.cur.execute("select * from plugin_Images where Extension ='"+extension+"' and Format ='"+format+"' and DateCreated ='"+datecreated+"' and Artists ='"+artists+"';")
+				answer = self.cur.fetchall()
+				answer = dict(answer)
+		except sqlite3.Error, msg:
+			print msg
+		return answer
 		
+	##
+	#When ojbect is destroyed it is set up to close the database and cursor to the database
+	def __del__ (self):
+		self.cur.close()
+		self.database.close()
