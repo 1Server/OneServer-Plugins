@@ -1,0 +1,10 @@
+create table if not exists plugin_Video(video_id int,Filename varchar(255),Extension varchar(255),Format varchar(255),Genres varchar(255),DateCreated varchar(255),Directors varchar(255));
+create table if not exists plugin_Audio(audio_id int,Filename varchar(255),Extension varchar(255),Format varchar(255),Genres varchar(255),DateCreated varchar(255),Artists varchar(255),Album varchar(255));
+create table if not exists plugin_Images(images_id int,Filename varchar(255),Extension varchar(255),Format varchar(255),DateCreated varchar(255),Artists varchar(255));
+drop table if exists plugin_Video;
+drop table if exists plugin_Audio;
+drop table if exists plugin_Images;
+SHOW TABLES from pluginproject;
+Select * from plugin_video;
+Select * from plugin_audio;
+Select * from plugin_images;
