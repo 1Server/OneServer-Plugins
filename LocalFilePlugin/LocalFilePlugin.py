@@ -1,6 +1,23 @@
 from IStoragePluginObserver import IStoragePluginObserver
-import sqlite3
+from wrappers.libDLNA import DLNAInterface
+from manager import OneServerManager
 from vfs import Entry
+import os
+import os.path
+from os.path import join, getsize
+
+try:
+	import sqlite3
+except ImportError:
+	print 'sqlite3 is not found.  Make sure you have python 2.7 installed'
+
+try:
+	from pymediainfo import MediaInfo
+except ImportError:
+	print 'pymediainfo:MediaInfo is not found.  Make sure you have the eyed3 library installed'
+
+
+
 ##
 # Provides a data source to browse local files for OneServer
 # Will add a directory structure like so
@@ -14,19 +31,28 @@ class LocalFilePlugin(IStoragePluginObserver):
 	self.PLUGINDATABASE = 'lfpDatabase.db'
 
 	def __init__(self):
-		self.dbHelper = LocalFileDatabaseHelper()
+		super(LocalFilePlugin,self).__init__(self)
+		self.ispo = IStoragePluginObserver('LocalFilePlugin')
+		self.dlna = None
+		self.idlna = None
+		self.dbHelper = None
 		
 	def enable(self):
-		raise NotImplementedError( "Should have implemented this" )
+		
 	
 	def disable(self):
 		raise NotImplementedError( "Should have implemented this" )
 	
 	def load(self):
-		raise NotImplementedError( "Should have implemented this" )
+		self.dbHelper = LocalFileDatabaseHelper(self.PLUGINDATABASE)
+		self.idlna = DLNAInterface()
+		self.dlna = OneServerManager().dlna
 	
 	def unload(self):
-		raise NotImplementedError( "Should have implemented this" )
+		self.dpHelper = None
+		self.dlna = None
+		self.idlna = None
+		del dbHelper
 		
 	##
 	# Gets the Entry given by the path.  Raises a DirectoryException if a directory is given
@@ -38,8 +64,11 @@ class LocalFilePlugin(IStoragePluginObserver):
 	# @throws DirectoryError If a directory path is given
 	# @throws EntryNotFoundError If the path does not lead to an Entry
 	def get(self, path):
-		raise NotImplementedError( "Should have implemented this" )
-		
+		if os.path.isdir(path):
+			raise DirectoryError
+		if os.path.isfile(path):
+			anEntry = Entry(path,self.idlna.dlna_guess_media_profile(self.dlna, path),os.path.abspath(path),None,os.path.splitext("path")[0],"",os.path.getsize(path),)
+		return anEntry
 	##
 	# This function functions similar to ls. 
 	# If a path to a directory is given, all of the entries in that directory will be returned.
@@ -50,40 +79,119 @@ class LocalFilePlugin(IStoragePluginObserver):
 	#
 	# @throws EntryNotFoundError If the given path does not exist
 	def list(self, path):
-		raise NotImplementedError( "Should have implemented this" )
+		list_of_files = {}
+		try:
+			for(dirpath, dirnames, filenames) in os.walk(path):
+				for filename in filenames:
+					list_of_files[filename] = os.sep.join([dirpath, filename])
+		except EntryNotFoundError:
+			print('Entry was not Found')
+			
+		return list_of_files
 		
 	##
 	# This function takes an Entry and adds it to the given data source.
 	#
 	# @param entry The Entry to add
-	# @param source The source to add it to
 	#
 	# @throws UploadNotSupportedError If uploading to the given source is not supported
-	def put(self, entry, source):
-		raise NotImplementedError( "Should have implemented this" )
+	def put(self, entry, type=0):
+		if type==0:
+			media_info = MediaInfo.parse(entry.fullPath)
+			FileName = entry.title
+			metadata[filename] = os.path.splitext(entry.fullPath)[0]
+			metadata[extension] = os.path.splitext(entry.fullPath)[1]
+			metadata[format] = None
+			metadata[genres] = None
+			metadata[datecreated] = None
+			metadata[directors] = None
+			for track in media_info.tracks:
+				if track.track_type == 'Video'
+					metadata[format] = track.format
+					metadata[genres] = track.genres
+					metadata[datecreated] = track.encoded_date
+					metadata[directors] = track.directors
+			
+			self.dbHelper.addEntry(entry.title, metadata, 0)
+		elif type==1:
+			media_info = MediaInfo.parse(entry.fullPath)
+			FileName = entry.title
+			metadata[filename] = os.path.splitext(entry.fullPath)[0]
+			metadata[extension] = os.path.splitext(entry.fullPath)[1]
+			metadata[format] = None
+			metadata[genres] = None
+			metadata[datecreated] = None
+			metadata[artists] = None
+			metadata[album] = None
+			for track in media_info.tracks:
+				if track.track_type == 'Audio'
+					metadata[format] = track.format
+					metadata[genres] = track.genres
+					metadata[datecreated] = track.encoded_date
+					metadata[artists] = track.artist
+					metadata[album] = track.album
+			
+			self.dbHelper.addEntry(entry.title, metadata, 1)
+		elif type==2:
+			media_info = MediaInfo.parse(entry.fullPath)
+			FileName = entry.title
+			metadata[filename] = os.path.splitext(entry.fullPath)[0]
+			metadata[extension] = os.path.splitext(entry.fullPath)[1]
+			metadata[format] = None
+			metadata[datecreated] = None
+			metadata[artists] = None
+			for track in media_info.tracks:
+				if track.track_type == 'Audio'
+					metadata[format] = track.format
+					metadata[datecreated] = track.encoded_date
+					metadata[artists] = track.artist
+			
+			self.dbHelper.addEntry(entry.title, metadata, 2)
 		
 	##
 	# This function searches through all sources to find matching entries
 	#
 	# @param metadata A dict of metadata which consists of keys such as "artist" or "genre".  As many as possible will be matches, and each additional value will be considered an AND
 	def search(self, metadata):
-		raise NotImplementedError( "Should have implemented this" )
+		listOfEntries = None
+		listOfEntries = self.dbHelper.findEntry(metadata,0)
+		listOfEntries = listOfEntries + self.dbHelper.findEntry(metadata, 1)
+		listOfEntries = listOfEntries + self.dbHelper.findEntry(metadata, 2)
+		return listOfEntries
+		
 		
 	##
 	# This function updates the metadata for the given entryy
 	# All fields found in the metadata dict will be overwritten
-	def updateMetadata(self, entry, metadata):
-		pass
+	def updateMetadata(self, entry, metadata,type=0):
+		metaData = metadata
+		if type==0:
+		
+		if type==1:
+		
+		return metaData
 		
 ##
 # This classs helps with handling the metadata database for the plugin.
 class LocalFileDatabaseHelper():
 	
 	##
+	# The instance of this singleton
+	_instance = None
+	
+	##
+	# Overides the __new__ of object to make sure we only have one instance
+	def __new__(cls, *args, **kwargs):
+		if not cls._instance:
+			cls._instance = super(LocalFileDatabaseHelper, cls).__new__(cls, *args, **kwargs)
+		return cls._instance
+	
+	##
 	# database is the path to the sqlite file
 	def __init__(self, database):
 		self.database = sqlite3.connect(database)
 		self.cur = database.cursor()
+		onCreate()
 		
 	
 	##
@@ -105,9 +213,9 @@ class LocalFileDatabaseHelper():
 	# @param title String of title
 	# @param metadata dict with keys like genre and artist
 	# @param type You need to pass in what type of media object it is.  0 for Video, 1 for Audio, and 2 for images
-	def addEntry(self, title, metadata,type):
+	def addEntry(self, title, metadata, type=0):
 		try:
-			if(type==0):
+			if type==0:
 				filename = metadata[filename]
 				extension = metadata[extension]
 				format = metadata[format]
@@ -117,7 +225,7 @@ class LocalFileDatabaseHelper():
 				
 				self.cur.execute("insert into plugin_Video values ("+filename+","+extension+","+format+","+genres+","+datecreated+","+directors+")")
 				self.database.commit()
-			elif(type==1):
+			elif type==1:
 				filename = metadata[filename]
 				extension = metadata[extension]
 				format = metadata[format]
@@ -128,7 +236,7 @@ class LocalFileDatabaseHelper():
 				
 				self.cur.execute("insert into plugin_Audio values ("+filename+","+extension+","+format+","+genres+","+datecreated+","+artists+","+album+")")
 				self.database.commit()
-			elif(type==2):
+			elif type==2:
 				filename = metadata[filename]
 				extension = metadata[extension]
 				format = metadata[format]
@@ -149,15 +257,15 @@ class LocalFileDatabaseHelper():
 	def getEntry(self, title, type=0):
 		answer = None
 		try:
-			if(type==0):
+			if type==0:
 				self.cur.execute("select * from plugin_Video where Filename ='"+title+"';")
 				answer = self.cur.fetchone()
 				answer = dict(answer)
-			elif(type==1):
+			elif type==1:
 				answer = self.cur.execute("select * from plugin_Audio where Filename ='"+title+"';")
 				answer = self.cur.fetchone()
 				answer = dict(answer)
-			elif(type==2):
+			elif type==2:
 				answer = self.cur.execute("select * from plugin_Images where Filename ='"+title+"';")
 				answer = self.cur.fetchone()
 				answer = dict(answer)
@@ -172,28 +280,28 @@ class LocalFileDatabaseHelper():
 	def findEntry(self, metadata, type=0):
 		answer = None
 		try:
-			if(type==0):
-				if(metadata[filename]==None):
+			if type==0:
+				if metadata[filename]==None:
 					filename = "*"
 				else:
 					filename = metadata[filename]
-				if(metadata[extension]==None):
+				if metadata[extension]==None:
 					extension = "*"
 				else:
 					extension = metadata[extension]
-				if(metadata[format]==None):
+				if metadata[format]==None:
 					format = "*"
 				else:
 					format = metadata[format]
-				if(metadata[genres]==None):
+				if metadata[genres]==None:
 					genres = "*"
 				else:
 					genres = metadata[genres]
-				if(metadata[datecreated]==None):
+				if metadata[datecreated]==None:
 					datecreated = "*"
 				else:
 					datecreated = metadata[datecreated]
-				if(metadata[directors]==None):
+				if metadata[directors]==None:
 					directors = "*"
 				else:
 					directors = metadata[directors]
@@ -202,32 +310,32 @@ class LocalFileDatabaseHelper():
 				self.cur.execute("select * from plugin_Video where Extension ='"+extension+"' and Format ='"+format+"' and Genres ='"+genres+"' and DateCreated ='"+datecreated+"' and Directors ='"+directors+"';")
 				answer = self.cur.fetchall()
 				answer = dict(answer)
-			elif(type==1):
-				if(metadata[filename]==None):
+			elif type==1:
+				if metadata[filename]==None:
 					filename = "*"
 				else:
 					filename = metadata[filename]
-				if(metadata[extension]==None):
+				if metadata[extension]==None:
 					extension = "*"
 				else:
 					extension = metadata[extension]
-				if(metadata[format]==None):
+				if metadata[format]==None:
 					format = "*"
 				else:
 					format = metadata[format]
-				if(metadata[genres]==None):
+				if metadata[genres]==None:
 					genres = "*"
 				else:
 					genres = metadata[genres]
-				if(metadata[datecreated]==None):
+				if metadata[datecreated]==None:
 					datecreated = "*"
 				else:
 					datecreated = metadata[datecreated]
-				if(metadata[artists]==None):
+				if metadata[artists]==None:
 					artists = "*"
 				else:
 					artists = metadata[artists]
-				if(metadata[album]==None):
+				if metadata[album]==None:
 					album = "*"
 				else:
 					album = metadata[album]
@@ -235,24 +343,24 @@ class LocalFileDatabaseHelper():
 				answer = self.cur.execute("select * from plugin_Audio where Extension ='"+extension+"' and Format ='"+format+"' and Genres ='"+genres+"' and DateCreated ='"+datecreated+"' and Artists ='"+artists+" and Album ='"+album+"';")
 				answer = self.cur.fetchall()
 				answer = dict(answer)
-			elif(type==2):
-				if(metadata[filename]==None):
+			elif type==2:
+				if metadata[filename]==None:
 					filename = "*"
 				else:
 					filename = metadata[filename]
-				if(metadata[extension]==None):
+				if metadata[extension]==None:
 					extension = "*"
 				else:
 					extension = metadata[extension]
-				if(metadata[format]==None):
+				if metadata[format]==None:
 					format = "*"
 				else:
 					format = metadata[format]
-				if(metadata[datecreated]==None):
+				if metadata[datecreated]==None:
 					datecreated = "*"
 				else:
 					datecreated = metadata[datecreated]
-				if(metadata[artists]==None):
+				if metadata[artists]==None:
 					artists = "*"
 				else:
 					artists = metadata[artists]
