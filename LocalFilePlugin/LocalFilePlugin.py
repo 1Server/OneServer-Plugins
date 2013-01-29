@@ -161,17 +161,62 @@ class LocalFilePlugin(IStoragePluginObserver):
 		
 		
 	##
-	# This function updates the metadata for the given entryy
+	# This function updates the metadata for the given entry
 	# All fields found in the metadata dict will be overwritten
 	def updateMetadata(self, entry, metadata,type=0):
 		metaData = metadata
 		if type==0:
-		
+			media_info = MediaInfo.parse(entry.fullPath)
+			FileName = entry.title
+			metadata[filename] = os.path.splitext(entry.fullPath)[0]
+			metadata[extension] = os.path.splitext(entry.fullPath)[1]
+			metadata[format] = None
+			metadata[genres] = None
+			metadata[datecreated] = None
+			metadata[directors] = None
+			for track in media_info.tracks:
+				if track.track_type == 'Video'
+					metadata[format] = track.format
+					metadata[genres] = track.genres
+					metadata[datecreated] = track.encoded_date
+					metadata[directors] = track.directors
+			
+			self.dbHelper.addEntry(entry.title, metadata, 0)
 		if type==1:
-		
+			media_info = MediaInfo.parse(entry.fullPath)
+			FileName = entry.title
+			metadata[filename] = os.path.splitext(entry.fullPath)[0]
+			metadata[extension] = os.path.splitext(entry.fullPath)[1]
+			metadata[format] = None
+			metadata[genres] = None
+			metadata[datecreated] = None
+			metadata[artists] = None
+			metadata[album] = None
+			for track in media_info.tracks:
+				if track.track_type == 'Audio'
+					metadata[format] = track.format
+					metadata[genres] = track.genres
+					metadata[datecreated] = track.encoded_date
+					metadata[artists] = track.artist
+					metadata[album] = track.album
+			
+			self.dbHelper.addEntry(entry.title, metadata, 1)
 		if type==2:
-		
-		return metaData
+			media_info = MediaInfo.parse(entry.fullPath)
+			FileName = entry.title
+			metadata[filename] = os.path.splitext(entry.fullPath)[0]
+			metadata[extension] = os.path.splitext(entry.fullPath)[1]
+			metadata[format] = None
+			metadata[datecreated] = None
+			metadata[artists] = None
+			for track in media_info.tracks:
+				if track.track_type == 'Image'
+					metadata[format] = track.format
+					metadata[datecreated] = track.encoded_date
+					metadata[artists] = track.artist
+			
+			self.dbHelper.addEntry(entry.title, metadata, 2)
+		return metadata
 		
 ##
 # This classs helps with handling the metadata database for the plugin.
