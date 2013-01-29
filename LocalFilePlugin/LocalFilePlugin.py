@@ -166,6 +166,7 @@ class LocalFilePlugin(IStoragePluginObserver):
 	def updateMetadata(self, entry, metadata,type=0):
 		metaData = metadata
 		if type==0:
+			self.dbHelper.removeEntry(entry.title,0)
 			media_info = MediaInfo.parse(entry.fullPath)
 			FileName = entry.title
 			metadata[filename] = os.path.splitext(entry.fullPath)[0]
@@ -183,6 +184,7 @@ class LocalFilePlugin(IStoragePluginObserver):
 			
 			self.dbHelper.addEntry(entry.title, metadata, 0)
 		if type==1:
+			self.dbHelper.removeEntry(entry.title,1)
 			media_info = MediaInfo.parse(entry.fullPath)
 			FileName = entry.title
 			metadata[filename] = os.path.splitext(entry.fullPath)[0]
@@ -202,6 +204,7 @@ class LocalFilePlugin(IStoragePluginObserver):
 			
 			self.dbHelper.addEntry(entry.title, metadata, 1)
 		if type==2:
+			self.dbHelper.removeEntry(entry.title,2)
 			media_info = MediaInfo.parse(entry.fullPath)
 			FileName = entry.title
 			metadata[filename] = os.path.splitext(entry.fullPath)[0]
@@ -245,9 +248,9 @@ class LocalFileDatabaseHelper():
 	# Creates the database if needed
 	def onCreate(self):
 		try:
-			self.cur.execute('''create table if not exists plugin_Video(Filename varchar,Extension varchar,Format varchar,Genres varchar,DateCreated varchar,Directors varchar)''')
-			self.cur.execute('''create table if not exists plugin_Audio(Filename varchar,Extension varchar,Format varchar,Genres varchar,DateCreated varchar,Artists varchar,Album varchar)''')
-			self.cur.execute('''create table if not exists plugin_Images(Filename varchar,Extension varchar,Format varchar,DateCreated varchar,Artists varchar)''')
+			self.cur.execute('''create table if not exists plugin_Video(Title varchar,Filename varchar,Extension varchar,Format varchar,Genres varchar,DateCreated varchar,Directors varchar)''')
+			self.cur.execute('''create table if not exists plugin_Audio(Title varchar,Filename varchar,Extension varchar,Format varchar,Genres varchar,DateCreated varchar,Artists varchar,Album varchar)''')
+			self.cur.execute('''create table if not exists plugin_Images(Title varchar,Filename varchar,Extension varchar,Format varchar,DateCreated varchar,Artists varchar)''')
 		except sqlite3.Error, msg:
 			print msg
 	
@@ -270,7 +273,7 @@ class LocalFileDatabaseHelper():
 				datecreated = metadata[datecreated]
 				directors = metadata[directors]
 				
-				self.cur.execute("insert into plugin_Video values ("+filename+","+extension+","+format+","+genres+","+datecreated+","+directors+")")
+				self.cur.execute("insert into plugin_Video values ("+title+","+filename+","+extension+","+format+","+genres+","+datecreated+","+directors+")")
 				self.database.commit()
 			elif type==1:
 				filename = metadata[filename]
@@ -281,7 +284,7 @@ class LocalFileDatabaseHelper():
 				artists = metadata[artists]
 				album = metadata[album]
 				
-				self.cur.execute("insert into plugin_Audio values ("+filename+","+extension+","+format+","+genres+","+datecreated+","+artists+","+album+")")
+				self.cur.execute("insert into plugin_Audio values ("+title+","+filename+","+extension+","+format+","+genres+","+datecreated+","+artists+","+album+")")
 				self.database.commit()
 			elif type==2:
 				filename = metadata[filename]
@@ -290,7 +293,7 @@ class LocalFileDatabaseHelper():
 				datecreated = metadata[datecreated]
 				artists = metadata[artists]
 				
-				self.cur.execute("insert into plugin_Images values ("+filename+","+extension+","+format+","+datecreated+","+artists+")")
+				self.cur.execute("insert into plugin_Images values ("+title+","+filename+","+extension+","+format+","+datecreated+","+artists+")")
 				self.database.commit()
 		except sqlite3.Error, msg:
 			print msg
@@ -305,15 +308,15 @@ class LocalFileDatabaseHelper():
 		answer = None
 		try:
 			if type==0:
-				self.cur.execute("select * from plugin_Video where Filename ='"+title+"';")
+				self.cur.execute("select * from plugin_Video where Title ='"+title+"';")
 				answer = self.cur.fetchone()
 				answer = dict(answer)
 			elif type==1:
-				answer = self.cur.execute("select * from plugin_Audio where Filename ='"+title+"';")
+				answer = self.cur.execute("select * from plugin_Audio where Title ='"+title+"';")
 				answer = self.cur.fetchone()
 				answer = dict(answer)
 			elif type==2:
-				answer = self.cur.execute("select * from plugin_Images where Filename ='"+title+"';")
+				answer = self.cur.execute("select * from plugin_Images where Title ='"+title+"';")
 				answer = self.cur.fetchone()
 				answer = dict(answer)
 		except sqlite3.Error, msg:
@@ -418,6 +421,29 @@ class LocalFileDatabaseHelper():
 		except sqlite3.Error, msg:
 			print msg
 		return answer
+		
+		
+	##
+	#This method is called when an Entry needs to be removed from a db
+	#
+	# @param title name of the file
+	# @param type You need to pass in what type of media object it is.  0 for Video, 1 for Audio, and 2 for images
+	def removeEntry(self,title,type=0):
+		if type==0:
+			try:
+				self.cur.execute("delete * from plugin_Video where Title ='"+title+"'")
+			except sqlite3.Error, msg:
+				print msg
+		elif type==1:
+			try:
+				self.cur.execute("delete * from plugin_Audio where Title ='"+title+"'")
+			except sqlite3.Error, msg:
+				print msg
+		elif type==2:
+			try:
+				self.cur.execute("delete * from plugin_Images where Title ='"+title+"'")
+			except sqlite3.Error, msg:
+				print msg
 		
 	##
 	#When ojbect is destroyed it is set up to close the database and cursor to the database
