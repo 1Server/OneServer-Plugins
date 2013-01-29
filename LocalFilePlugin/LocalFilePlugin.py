@@ -141,7 +141,7 @@ class LocalFilePlugin(IStoragePluginObserver):
 			metadata[datecreated] = None
 			metadata[artists] = None
 			for track in media_info.tracks:
-				if track.track_type == 'Audio'
+				if track.track_type == 'Image'
 					metadata[format] = track.format
 					metadata[datecreated] = track.encoded_date
 					metadata[artists] = track.artist
@@ -168,6 +168,8 @@ class LocalFilePlugin(IStoragePluginObserver):
 		if type==0:
 		
 		if type==1:
+		
+		if type==2:
 		
 		return metaData
 		
