@@ -1,9 +1,0 @@
-setup.py
-LocalFilePlugin.py.egg-info/PKG-INFO
-LocalFilePlugin.py.egg-info/SOURCES.txt
-LocalFilePlugin.py.egg-info/dependency_links.txt
-LocalFilePlugin.py.egg-info/requires.txt
-LocalFilePlugin.py.egg-info/top_level.txt
-OneServer/__init__.py
-OneServer/LFP/LocalFilePlugin.py
-OneServer/LFP/__init__.py
