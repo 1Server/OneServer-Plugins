@@ -1,4 +1,4 @@
-from IStoragePluginObserver import IStoragePluginObserver
+from interface import IStoragePluginObserver
 from wrappers.libDLNA import DLNAInterface
 from manager import OneServerManager
 from vfs import Entry
@@ -25,10 +25,9 @@ except ImportError:
 # /LocalFilePlugin/genre/*  Browse based on genres
 # /LocalFilePlugin/artist/* Browse based on artists
 # etc
-# Metadata shoudl be gotten with https://bitbucket.org/haypo/hachoir/wiki/hachoir-metadata
 class LocalFilePlugin(IStoragePluginObserver):
 
-	self.PLUGINDATABASE = 'lfpDatabase.db'
+	PLUGINDATABASE = 'LocalFilePlugin.db'
 
 	def __init__(self):
 		super(LocalFilePlugin,self).__init__(self)
@@ -38,7 +37,7 @@ class LocalFilePlugin(IStoragePluginObserver):
 		self.dbHelper = None
 		
 	def enable(self):
-		
+		pass
 	
 	def disable(self):
 		raise NotImplementedError( "Should have implemented this" )
@@ -67,7 +66,11 @@ class LocalFilePlugin(IStoragePluginObserver):
 		if os.path.isdir(path):
 			raise DirectoryError
 		if os.path.isfile(path):
-			anEntry = Entry(path,self.idlna.dlna_guess_media_profile(self.dlna, path),os.path.abspath(path),None,os.path.splitext("path")[0],"",os.path.getsize(path),)
+			profile = self.idlna.dlna_guess_media_profile(self.dlna, path)
+			path = os.path.splitext("path")[0]
+			fileSize = os.path.getsize(path)
+			absolutePath = os.path.abspath(path)
+			anEntry = Entry(path,profile,absolutePath,None,path,"",fileSize,None)
 		return anEntry
 	##
 	# This function functions similar to ls. 
@@ -79,33 +82,34 @@ class LocalFilePlugin(IStoragePluginObserver):
 	#
 	# @throws EntryNotFoundError If the given path does not exist
 	def list(self, path):
-		list_of_files = {}
+		listOfFiles = {}
 		try:
 			for(dirpath, dirnames, filenames) in os.walk(path):
 				for filename in filenames:
-					list_of_files[filename] = os.sep.join([dirpath, filename])
+					listOfFiles[filename] = os.sep.join([dirpath, filename])
 		except EntryNotFoundError:
 			print('Entry was not Found')
 			
-		return list_of_files
+		return listOfFiles
 		
 	##
 	# This function takes an Entry and adds it to the given data source.
 	#
 	# @param entry The Entry to add
+	# @param type You need to pass in what type of media object it is.  0 for Video, 1 for Audio, and 2 for images 
 	#
 	# @throws UploadNotSupportedError If uploading to the given source is not supported
 	def put(self, entry, type=0):
+		mediaInfo = MediaInfo.parse(entry.fullPath)
+		FileName = entry.title
+		metadata[filename] = os.path.splitext(entry.fullPath)[0]
+		metadata[extension] = os.path.splitext(entry.fullPath)[1]
+		metadata[format] = None
 		if type==0:
-			media_info = MediaInfo.parse(entry.fullPath)
-			FileName = entry.title
-			metadata[filename] = os.path.splitext(entry.fullPath)[0]
-			metadata[extension] = os.path.splitext(entry.fullPath)[1]
-			metadata[format] = None
 			metadata[genres] = None
 			metadata[datecreated] = None
 			metadata[directors] = None
-			for track in media_info.tracks:
+			for track in mediaInfo.tracks:
 				if track.track_type == 'Video'
 					metadata[format] = track.format
 					metadata[genres] = track.genres
@@ -114,16 +118,11 @@ class LocalFilePlugin(IStoragePluginObserver):
 			
 			self.dbHelper.addEntry(entry.title, metadata, 0)
 		elif type==1:
-			media_info = MediaInfo.parse(entry.fullPath)
-			FileName = entry.title
-			metadata[filename] = os.path.splitext(entry.fullPath)[0]
-			metadata[extension] = os.path.splitext(entry.fullPath)[1]
-			metadata[format] = None
 			metadata[genres] = None
 			metadata[datecreated] = None
 			metadata[artists] = None
 			metadata[album] = None
-			for track in media_info.tracks:
+			for track in mediaInfo.tracks:
 				if track.track_type == 'Audio'
 					metadata[format] = track.format
 					metadata[genres] = track.genres
@@ -133,14 +132,9 @@ class LocalFilePlugin(IStoragePluginObserver):
 			
 			self.dbHelper.addEntry(entry.title, metadata, 1)
 		elif type==2:
-			media_info = MediaInfo.parse(entry.fullPath)
-			FileName = entry.title
-			metadata[filename] = os.path.splitext(entry.fullPath)[0]
-			metadata[extension] = os.path.splitext(entry.fullPath)[1]
-			metadata[format] = None
 			metadata[datecreated] = None
 			metadata[artists] = None
-			for track in media_info.tracks:
+			for track in mediaInfo.tracks:
 				if track.track_type == 'Image'
 					metadata[format] = track.format
 					metadata[datecreated] = track.encoded_date
@@ -163,19 +157,23 @@ class LocalFilePlugin(IStoragePluginObserver):
 	##
 	# This function updates the metadata for the given entry
 	# All fields found in the metadata dict will be overwritten
+	# 
+	# @param entry An Entry object that tells from what media file does the updated media
+	# @param metadata Dictionary of metadata that needs to be updated
+	# @param type You need to pass in what type of media object it is.  0 for Video, 1 for Audio, and 2 for images
 	def updateMetadata(self, entry, metadata,type=0):
 		metaData = metadata
+		mediaInfo = MediaInfo.parse(entry.fullPath)
+		FileName = entry.title
+		metadata[filename] = os.path.splitext(entry.fullPath)[0]
+		metadata[extension] = os.path.splitext(entry.fullPath)[1]
+		metadata[format] = None
 		if type==0:
 			self.dbHelper.removeEntry(entry.title,0)
-			media_info = MediaInfo.parse(entry.fullPath)
-			FileName = entry.title
-			metadata[filename] = os.path.splitext(entry.fullPath)[0]
-			metadata[extension] = os.path.splitext(entry.fullPath)[1]
-			metadata[format] = None
 			metadata[genres] = None
 			metadata[datecreated] = None
 			metadata[directors] = None
-			for track in media_info.tracks:
+			for track in mediaInfo.tracks:
 				if track.track_type == 'Video'
 					metadata[format] = track.format
 					metadata[genres] = track.genres
@@ -185,16 +183,11 @@ class LocalFilePlugin(IStoragePluginObserver):
 			self.dbHelper.addEntry(entry.title, metadata, 0)
 		if type==1:
 			self.dbHelper.removeEntry(entry.title,1)
-			media_info = MediaInfo.parse(entry.fullPath)
-			FileName = entry.title
-			metadata[filename] = os.path.splitext(entry.fullPath)[0]
-			metadata[extension] = os.path.splitext(entry.fullPath)[1]
-			metadata[format] = None
 			metadata[genres] = None
 			metadata[datecreated] = None
 			metadata[artists] = None
 			metadata[album] = None
-			for track in media_info.tracks:
+			for track in mediaInfo.tracks:
 				if track.track_type == 'Audio'
 					metadata[format] = track.format
 					metadata[genres] = track.genres
@@ -205,14 +198,9 @@ class LocalFilePlugin(IStoragePluginObserver):
 			self.dbHelper.addEntry(entry.title, metadata, 1)
 		if type==2:
 			self.dbHelper.removeEntry(entry.title,2)
-			media_info = MediaInfo.parse(entry.fullPath)
-			FileName = entry.title
-			metadata[filename] = os.path.splitext(entry.fullPath)[0]
-			metadata[extension] = os.path.splitext(entry.fullPath)[1]
-			metadata[format] = None
 			metadata[datecreated] = None
 			metadata[artists] = None
-			for track in media_info.tracks:
+			for track in mediaInfo.tracks:
 				if track.track_type == 'Image'
 					metadata[format] = track.format
 					metadata[datecreated] = track.encoded_date
@@ -243,7 +231,6 @@ class LocalFileDatabaseHelper():
 		self.cur = database.cursor()
 		onCreate()
 		
-	
 	##
 	# Creates the database if needed
 	def onCreate(self):
@@ -265,36 +252,24 @@ class LocalFileDatabaseHelper():
 	# @param type You need to pass in what type of media object it is.  0 for Video, 1 for Audio, and 2 for images
 	def addEntry(self, title, metadata, type=0):
 		try:
+			filename = metadata[filename]
+			extension = metadata[extension]
+			format = metadata[format]
+			datecreated = metadata[datecreated]
 			if type==0:
-				filename = metadata[filename]
-				extension = metadata[extension]
-				format = metadata[format]
 				genres = metadata[genres]
-				datecreated = metadata[datecreated]
 				directors = metadata[directors]
-				
 				self.cur.execute("insert into plugin_Video values ("+title+","+filename+","+extension+","+format+","+genres+","+datecreated+","+directors+")")
-				self.database.commit()
 			elif type==1:
-				filename = metadata[filename]
-				extension = metadata[extension]
-				format = metadata[format]
 				genres = metadata[genres]
-				datecreated = metadata[datecreated]
 				artists = metadata[artists]
 				album = metadata[album]
-				
 				self.cur.execute("insert into plugin_Audio values ("+title+","+filename+","+extension+","+format+","+genres+","+datecreated+","+artists+","+album+")")
-				self.database.commit()
 			elif type==2:
-				filename = metadata[filename]
-				extension = metadata[extension]
-				format = metadata[format]
-				datecreated = metadata[datecreated]
 				artists = metadata[artists]
-				
 				self.cur.execute("insert into plugin_Images values ("+title+","+filename+","+extension+","+format+","+datecreated+","+artists+")")
-				self.database.commit()
+			
+			self.database.commit()
 		except sqlite3.Error, msg:
 			print msg
 		
@@ -302,23 +277,20 @@ class LocalFileDatabaseHelper():
 	# This function get a dictionary containing all metadata on the given title
 	# In a dict that with keys that define the type of data such as genre
 	#
-	# @title title String of title
+	# @title title MediaFile Title
 	# @param type You need to pass in what type of media object it is.  0 for Video, 1 for Audio, and 2 for images
 	def getEntry(self, title, type=0):
 		answer = None
 		try:
 			if type==0:
 				self.cur.execute("select * from plugin_Video where Title ='"+title+"';")
-				answer = self.cur.fetchone()
-				answer = dict(answer)
 			elif type==1:
 				answer = self.cur.execute("select * from plugin_Audio where Title ='"+title+"';")
-				answer = self.cur.fetchone()
-				answer = dict(answer)
 			elif type==2:
 				answer = self.cur.execute("select * from plugin_Images where Title ='"+title+"';")
-				answer = self.cur.fetchone()
-				answer = dict(answer)
+			
+			answer = self.cur.fetchone()
+			answer = dict(answer)
 		except sqlite3.Error, msg:
 			print msg
 		return answer
@@ -330,94 +302,48 @@ class LocalFileDatabaseHelper():
 	def findEntry(self, metadata, type=0):
 		answer = None
 		try:
+			if metadata[filename]==None:
+				filename = "*"
+			else:
+				filename = metadata[filename]
+			if metadata[extension]==None:
+				extension = "*"
+			else:
+				extension = metadata[extension]
+			if metadata[format]==None:
+				format = "*"
+			else:
+				format = metadata[format]
+			if metadata[genres]==None:
+				genres = "*"
+			else:
+				genres = metadata[genres]
+			if metadata[datecreated]==None:
+				datecreated = "*"
+			else:
+				datecreated = metadata[datecreated]
+			if metadata[directors]==None:
+				directors = "*"
+			else:
+				directors = metadata[directors]
+			if metadata[artists]==None:
+				artists = "*"
+			else:
+				artists = metadata[artists]
+			if metadata[album]==None:
+				album = "*"
+			else:
+				album = metadata[album]
+			
 			if type==0:
-				if metadata[filename]==None:
-					filename = "*"
-				else:
-					filename = metadata[filename]
-				if metadata[extension]==None:
-					extension = "*"
-				else:
-					extension = metadata[extension]
-				if metadata[format]==None:
-					format = "*"
-				else:
-					format = metadata[format]
-				if metadata[genres]==None:
-					genres = "*"
-				else:
-					genres = metadata[genres]
-				if metadata[datecreated]==None:
-					datecreated = "*"
-				else:
-					datecreated = metadata[datecreated]
-				if metadata[directors]==None:
-					directors = "*"
-				else:
-					directors = metadata[directors]
-				
-				
 				self.cur.execute("select * from plugin_Video where Extension ='"+extension+"' and Format ='"+format+"' and Genres ='"+genres+"' and DateCreated ='"+datecreated+"' and Directors ='"+directors+"';")
-				answer = self.cur.fetchall()
-				answer = dict(answer)
 			elif type==1:
-				if metadata[filename]==None:
-					filename = "*"
-				else:
-					filename = metadata[filename]
-				if metadata[extension]==None:
-					extension = "*"
-				else:
-					extension = metadata[extension]
-				if metadata[format]==None:
-					format = "*"
-				else:
-					format = metadata[format]
-				if metadata[genres]==None:
-					genres = "*"
-				else:
-					genres = metadata[genres]
-				if metadata[datecreated]==None:
-					datecreated = "*"
-				else:
-					datecreated = metadata[datecreated]
-				if metadata[artists]==None:
-					artists = "*"
-				else:
-					artists = metadata[artists]
-				if metadata[album]==None:
-					album = "*"
-				else:
-					album = metadata[album]
-				
 				answer = self.cur.execute("select * from plugin_Audio where Extension ='"+extension+"' and Format ='"+format+"' and Genres ='"+genres+"' and DateCreated ='"+datecreated+"' and Artists ='"+artists+" and Album ='"+album+"';")
-				answer = self.cur.fetchall()
-				answer = dict(answer)
 			elif type==2:
-				if metadata[filename]==None:
-					filename = "*"
-				else:
-					filename = metadata[filename]
-				if metadata[extension]==None:
-					extension = "*"
-				else:
-					extension = metadata[extension]
-				if metadata[format]==None:
-					format = "*"
-				else:
-					format = metadata[format]
-				if metadata[datecreated]==None:
-					datecreated = "*"
-				else:
-					datecreated = metadata[datecreated]
-				if metadata[artists]==None:
-					artists = "*"
-				else:
-					artists = metadata[artists]
-				
 				answer = self.cur.execute("select * from plugin_Images where Extension ='"+extension+"' and Format ='"+format+"' and DateCreated ='"+datecreated+"' and Artists ='"+artists+"';")
-				answer = self.cur.fetchall()
-				answer = dict(answer)
+			
+			answer = self.cur.fetchall()
+			answer = dict(answer)
 		except sqlite3.Error, msg:
 			print msg
 		return answer
@@ -429,22 +355,15 @@ class LocalFileDatabaseHelper():
 	# @param title name of the file
 	# @param type You need to pass in what type of media object it is.  0 for Video, 1 for Audio, and 2 for images
 	def removeEntry(self,title,type=0):
-		if type==0:
-			try:
+		try:
+			if type==0:
 				self.cur.execute("delete * from plugin_Video where Title ='"+title+"'")
-			except sqlite3.Error, msg:
-				print msg
-		elif type==1:
-			try:
+			elif type==1:
 				self.cur.execute("delete * from plugin_Audio where Title ='"+title+"'")
-			except sqlite3.Error, msg:
-				print msg
-		elif type==2:
-			try:
+			elif type==2:
 				self.cur.execute("delete * from plugin_Images where Title ='"+title+"'")
-			except sqlite3.Error, msg:
-				print msg
-		
+		except sqlite3.Error, msg:
+			print msg
 	##
 	#When ojbect is destroyed it is set up to close the database and cursor to the database
 	def __del__ (self):
