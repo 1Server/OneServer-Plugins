@@ -1,10 +1,11 @@
-from interface import IStoragePluginObserver
+from plugin.interface import IStoragePluginObserver
 from wrappers.libDLNA import DLNAInterface
 from manager import OneServerManager
 from vfs import Entry
 import os
 import os.path
 from os.path import join, getsize
+from pyutilib.component.core import *
 
 try:
 	import sqlite3
@@ -25,7 +26,8 @@ except ImportError:
 # /LocalFilePlugin/genre/*  Browse based on genres
 # /LocalFilePlugin/artist/* Browse based on artists
 # etc
-class LocalFilePlugin(IStoragePluginObserver):
+class LocalFilePlugin(Plugin):
+	implements(IStoragePluginObserver, inherit=False)
 
 	PLUGINDATABASE = 'LocalFilePlugin.db'
 
@@ -33,23 +35,21 @@ class LocalFilePlugin(IStoragePluginObserver):
 		super(LocalFilePlugin,self).__init__(self)
 		self.ispo = IStoragePluginObserver('LocalFilePlugin')
 		self.dlna = None
-		self.idlna = None
 		self.dbHelper = None
 		
 	def enable(self):
-		pass
+		OneServerManager().log.debug('LocalFilePlugin is enabled')
 	
 	def disable(self):
 		raise NotImplementedError( "Should have implemented this" )
 	
 	def load(self):
 		self.dbHelper = LocalFileDatabaseHelper(self.PLUGINDATABASE)
-		self.idlna = DLNAInterface()
 		self.dlna = OneServerManager().dlna
+		OneServerManager().log.debug('LocalFilePlugin is loaded')
 	
 	def unload(self):
 		self.dpHelper = None
-		self.dlna = None
 		self.idlna = None
 		del dbHelper
 		
@@ -66,7 +66,7 @@ class LocalFilePlugin(IStoragePluginObserver):
 		if os.path.isdir(path):
 			raise DirectoryError
 		if os.path.isfile(path):
-			profile = self.idlna.dlna_guess_media_profile(self.dlna, path)
+			profile = self.dlna.idlna.dlna_guess_media_profile(self.dlna, path)
 			path = os.path.splitext("path")[0]
 			fileSize = os.path.getsize(path)
 			absolutePath = os.path.abspath(path)
@@ -105,42 +105,39 @@ class LocalFilePlugin(IStoragePluginObserver):
 		metadata[filename] = os.path.splitext(entry.fullPath)[0]
 		metadata[extension] = os.path.splitext(entry.fullPath)[1]
 		metadata[format] = None
+		metadata[datecreated] = None
 		if type==0:
 			metadata[genres] = None
-			metadata[datecreated] = None
 			metadata[directors] = None
 			for track in mediaInfo.tracks:
-				if track.track_type == 'Video'
+				if track.track_type == 'Video':
 					metadata[format] = track.format
 					metadata[genres] = track.genres
 					metadata[datecreated] = track.encoded_date
 					metadata[directors] = track.directors
 			
-			self.dbHelper.addEntry(entry.title, metadata, 0)
 		elif type==1:
 			metadata[genres] = None
-			metadata[datecreated] = None
 			metadata[artists] = None
 			metadata[album] = None
 			for track in mediaInfo.tracks:
-				if track.track_type == 'Audio'
+				if track.track_type == 'Audio':
 					metadata[format] = track.format
 					metadata[genres] = track.genres
 					metadata[datecreated] = track.encoded_date
 					metadata[artists] = track.artist
 					metadata[album] = track.album
 			
-			self.dbHelper.addEntry(entry.title, metadata, 1)
 		elif type==2:
-			metadata[datecreated] = None
 			metadata[artists] = None
 			for track in mediaInfo.tracks:
-				if track.track_type == 'Image'
+				if track.track_type == 'Image':
 					metadata[format] = track.format
 					metadata[datecreated] = track.encoded_date
 					metadata[artists] = track.artist
-			
-			self.dbHelper.addEntry(entry.title, metadata, 2)
+		else:
+			return
+		self.dbHelper.addEntry(entry.title, metadata, type)
 		
 	##
 	# This function searches through all sources to find matching entries
@@ -168,13 +165,13 @@ class LocalFilePlugin(IStoragePluginObserver):
 		metadata[filename] = os.path.splitext(entry.fullPath)[0]
 		metadata[extension] = os.path.splitext(entry.fullPath)[1]
 		metadata[format] = None
+		metadata[datecreated] = None
 		if type==0:
 			self.dbHelper.removeEntry(entry.title,0)
 			metadata[genres] = None
-			metadata[datecreated] = None
 			metadata[directors] = None
 			for track in mediaInfo.tracks:
-				if track.track_type == 'Video'
+				if track.track_type == 'Video':
 					metadata[format] = track.format
 					metadata[genres] = track.genres
 					metadata[datecreated] = track.encoded_date
@@ -184,11 +181,10 @@ class LocalFilePlugin(IStoragePluginObserver):
 		if type==1:
 			self.dbHelper.removeEntry(entry.title,1)
 			metadata[genres] = None
-			metadata[datecreated] = None
 			metadata[artists] = None
 			metadata[album] = None
 			for track in mediaInfo.tracks:
-				if track.track_type == 'Audio'
+				if track.track_type == 'Audio':
 					metadata[format] = track.format
 					metadata[genres] = track.genres
 					metadata[datecreated] = track.encoded_date
@@ -198,10 +194,9 @@ class LocalFilePlugin(IStoragePluginObserver):
 			self.dbHelper.addEntry(entry.title, metadata, 1)
 		if type==2:
 			self.dbHelper.removeEntry(entry.title,2)
-			metadata[datecreated] = None
 			metadata[artists] = None
 			for track in mediaInfo.tracks:
-				if track.track_type == 'Image'
+				if track.track_type == 'Image':
 					metadata[format] = track.format
 					metadata[datecreated] = track.encoded_date
 					metadata[artists] = track.artist

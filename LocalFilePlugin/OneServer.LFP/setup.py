@@ -11,6 +11,10 @@ setup(name='LocalFilePlugin.py',
 			"Development Status :: 3 - Alpha",
 			"Topic :: Plugin"
       ],
+      entry_points = """
+			[oneserver.plugins]
+			LocalFilePlugin = OneServer.LFP.LocalFilePlugin.LocalFilePlugin
+			""",
 	  keywords='FileHandler metadata database',
 	  packages = find_packages()
 )
