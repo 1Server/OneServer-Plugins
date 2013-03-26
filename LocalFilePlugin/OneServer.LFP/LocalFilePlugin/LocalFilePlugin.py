@@ -53,6 +53,9 @@ class LocalFilePlugin(Plugin):
 		self.idlna = None
 		del dbHelper
 		
+		
+	def info(self):
+		OneServerManager().log.debug('Local File Plugin 1.0.0')
 	##
 	# Gets the Entry given by the path.  Raises a DirectoryException if a directory is given
 	#

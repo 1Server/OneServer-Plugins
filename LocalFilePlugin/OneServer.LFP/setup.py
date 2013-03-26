@@ -1,21 +1,26 @@
+import os
 from setuptools import find_packages, setup
 
 setup(name='LocalFilePlugin.py',
       version='0.1.0',
-      description='LocalFilePlugin handles files for the oneserver',
-      install_requires=[
-			'Python >= 2.7',
+	  description='LocalFilePlugin handles files for the oneserver',
+	  keywords='FileHandler metadata database',
+	  install_requires=[
+	#		'Python >= 2.7',
+			'pyutilib.component.core',
 			'pymediainfo'
-                       ],
-      classifiers=[
+				],
+	  classifiers=[
 			"Development Status :: 3 - Alpha",
 			"Topic :: Plugin"
-      ],
-      entry_points = """
-			[oneserver.plugins]
-			LocalFilePlugin = OneServer.LFP.LocalFilePlugin.LocalFilePlugin
-			""",
-	  keywords='FileHandler metadata database',
-	  packages = find_packages()
+				],
+	  packages = find_packages(),
+	  namespace_packages=['LocalFilePlugin'],
+	  entry_points={
+		'OneServer' : [
+			'LocalFilePlugin = LocalFilePlugin.LocalFilePlugin:LocalFilePlugin'
+		]
+	  }
+
 )
 
