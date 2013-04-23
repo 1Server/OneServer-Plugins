@@ -1,11 +1,14 @@
-from plugin.interface import IStoragePluginObserver
+from plugin.interface import IStoragePlugin
 from wrappers.libDLNA import DLNAInterface
 from manager import OneServerManager
 from vfs import Entry
 import os
 import os.path
 from os.path import join, getsize
+import platform
 from pyutilib.component.core import *
+
+from os.path import expanduser
 
 try:
 	import sqlite3
@@ -27,15 +30,28 @@ except ImportError:
 # /LocalFilePlugin/artist/* Browse based on artists
 # etc
 class LocalFilePlugin(Plugin):
-	implements(IStoragePluginObserver, inherit=False)
+	implements(IStoragePlugin, inherit=False)
 
 	PLUGINDATABASE = 'LocalFilePlugin.db'
 
 	def __init__(self):
-		super(LocalFilePlugin,self).__init__(self)
-		self.ispo = IStoragePluginObserver('LocalFilePlugin')
-		self.dlna = None
-		self.dbHelper = None
+		self.ispo = IStoragePlugin('Local Files')
+		self.tree = Entry("/lfs", OneServerManager().CONTAINER_MIME, None, [], "LFS", "lfs", -1, None)
+		self.dlna = OneServerManager().dlna
+	#	self.dbHelper = LocalFileDatabaseHelper(self.PLUGINDATABASE)
+		self.os = self.getOperatingSystem()
+		if self.os == 'Windows':
+			self.generateList(os.environ['%UserProfile%'])
+		elif self.os == 'Darwin':
+			self.generateList(os.environ['HOME'])
+		elif self.os == 'Linux':
+	#		self.generateList(os.environ['HOME'])
+			self.generateList("/home/ebertb/Music")
+			self.generateList("/home/ebertb/Pictures")
+			self.generateList("/home/ebertb/Videos")
+	#	self.generateList(expanduser('~'))
+		
+		
 		
 	def enable(self):
 		OneServerManager().log.debug('LocalFilePlugin is enabled')
@@ -55,7 +71,44 @@ class LocalFilePlugin(Plugin):
 		
 		
 	def info(self):
-		OneServerManager().log.debug('Local File Plugin 1.0.0')
+		return "Local File Plugin 1.0.0"
+	
+	
+	def generateList(self, path):
+		OneServerManager().log.debug('LocalFilePlugin: Loading Tree')
+		listOfFiles = {}
+		try:
+			OneServerManager().log.debug(path)
+			for dirpath, dirnames, filenames in os.walk(path):
+				for filename in filenames:
+					listOfFiles[filename] = os.sep.join([dirpath, filename])
+		except EntryNotFoundError:
+			print('Entry was not Found')
+			
+		for f in listOfFiles:
+			filename = listOfFiles[f]
+			profile = OneServerManager().idlna.dlna_guess_media_profile(self.dlna, filename)
+			OneServerManager().log.debug('Profile for %s: %s', filename, str(profile))
+			if profile is None:
+				raise ValueError("Invalid media type on {0}".format(f))
+			try:
+				profile.contents
+				fileSize = os.path.getsize(filename)
+				self.tree.addChild(Entry(filename,profile,self.tree,None, filename,"",fileSize,LocalFilePlugin.createLocalFileHandle))
+			except ValueError:
+				OneServerManager().log.debug("Invalid profile object, skipping "+filename)
+			
+			
+			
+
+	def getOperatingSystem(self):
+		return platform.system()
+	
+	@staticmethod
+	def createLocalFileHandle(entry):
+		fh =  open(entry.fullPath, "r")
+		OneServerManager().log.debug("Opened fh at {0}".format(str(fh)))
+		return fh
 	##
 	# Gets the Entry given by the path.  Raises a DirectoryException if a directory is given
 	#
