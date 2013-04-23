@@ -40,15 +40,18 @@ class LocalFilePlugin(Plugin):
 		self.dlna = OneServerManager().dlna
 	#	self.dbHelper = LocalFileDatabaseHelper(self.PLUGINDATABASE)
 		self.os = self.getOperatingSystem()
+		self.home = expanduser('~')
 		if self.os == 'Windows':
-			self.generateList(os.environ['%UserProfile%'])
+			self.generateList(expanduser('~')+"/My Music", "/Music")
+			self.generateList(expanduser('~')+"/My Pictures", "/Pictures")
+			self.generateList(expanduser('~')+"/My Videos", "/Videos")
 		elif self.os == 'Darwin':
+			#TODO Update when figured out Apple Media Storage
 			self.generateList(os.environ['HOME'])
 		elif self.os == 'Linux':
-	#		self.generateList(os.environ['HOME'])
-			self.generateList("/home/ebertb/Music")
-			self.generateList("/home/ebertb/Pictures")
-			self.generateList("/home/ebertb/Videos")
+			self.generateList(expanduser('~')+"/Music", "/Music")
+			self.generateList(expanduser('~')+"/Pictures", "/Pictures")
+			self.generateList(expanduser('~')+"/Videos", "/Videos")
 	#	self.generateList(expanduser('~'))
 		
 		
@@ -73,8 +76,11 @@ class LocalFilePlugin(Plugin):
 	def info(self):
 		return "Local File Plugin 1.0.0"
 	
+	def generateEntryForDirectory(self, directory):
+		newEntry = Entry(directory,OneServerManager().CONTAINER_MIME, None, [], directory, directory, -1, None)
+		return newEntry
 	
-	def generateList(self, path):
+	def generateList(self, path, location):
 		OneServerManager().log.debug('LocalFilePlugin: Loading Tree')
 		listOfFiles = {}
 		try:
@@ -84,7 +90,9 @@ class LocalFilePlugin(Plugin):
 					listOfFiles[filename] = os.sep.join([dirpath, filename])
 		except EntryNotFoundError:
 			print('Entry was not Found')
-			
+		
+		locationT = location.replace("/","")
+		entryForLocation = Entry(location,OneServerManager().CONTAINER_MIME, None, [], locationT.upper(), locationT, -1, None)
 		for f in listOfFiles:
 			filename = listOfFiles[f]
 			profile = OneServerManager().idlna.dlna_guess_media_profile(self.dlna, filename)
@@ -94,12 +102,12 @@ class LocalFilePlugin(Plugin):
 			try:
 				profile.contents
 				fileSize = os.path.getsize(filename)
-				self.tree.addChild(Entry(filename,profile,self.tree,None, filename,"",fileSize,LocalFilePlugin.createLocalFileHandle))
+				entryForLocation.addChild(Entry(filename,profile,self.tree,None, filename,"",fileSize,LocalFilePlugin.createLocalFileHandle))
 			except ValueError:
 				OneServerManager().log.debug("Invalid profile object, skipping "+filename)
 			
-			
-			
+		self.tree.addChild(entryForLocation)
+		
 
 	def getOperatingSystem(self):
 		return platform.system()
