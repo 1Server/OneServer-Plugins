@@ -7,6 +7,10 @@ import os.path
 from os.path import join, getsize
 import platform
 from pyutilib.component.core import *
+#import threading
+#import Queue
+import fnmatch
+import string
 
 from os.path import expanduser
 
@@ -79,6 +83,51 @@ class LocalFilePlugin(Plugin):
 	def generateEntryForDirectory(self, directory):
 		newEntry = Entry(directory,OneServerManager().CONTAINER_MIME, None, [], directory, directory, -1, None)
 		return newEntry
+	
+	
+	def search(f, filter):
+		matches = []
+
+		for root, dirnames, filenames in os.walk(f):
+			for dir in dirnames:
+				matches.append(search(os.path.join(root, dir), filter))
+			matches.append((os.path.join(root, filename) for filename in fnmatch.filter(filenames, filter)))
+		return matches
+	
+	def search(root, recurse=0, pattern='*', return_folders=0):
+		#initialize
+		results = []
+		
+		# must have at least root folder
+		try:
+			names = os.listdir(root)
+		except os.error:
+			return results
+		
+		#expand pattern
+		pattern = pattern or '*'
+		pat_list = string.splitfields(pattern, ';')
+		
+		#check each file
+		for name in names:
+			fullname = os.path.normpath(os.path.join(root,name))
+			
+			#grab if it matches our pattern and entry type
+			for pat in pat_list:
+				if fnmatch.fnmatch(name, pat):
+					if os.path.isfile(fullname) or (return_folders and os.path.isdir(fullname)):
+						result.append(fullname)
+						continue
+			
+			#recursively scan other folders, appending results
+			if recurse:
+				if os.path.isdir(fullname) and not os.path.islink(fullname):
+					results = results + Walk(fullname, recurse, pattern, return_folders)
+		
+		return results
+	
+	
+	
 	
 	def generateList(self, path, location):
 		OneServerManager().log.debug('LocalFilePlugin: Loading Tree')
